@@ -3,6 +3,10 @@ name: Setup Poetry
 on:
   workflow_call:
     inputs:
+      working_directory:
+        required: false
+        default: '.'
+        type: string
       python_version_file:
         required: true
         type: string
@@ -16,6 +20,9 @@ jobs:
   setup_poetry:
     name: Setup Poetry
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
     steps:
       - uses: webfactory/ssh-agent@v0.5.4
         with:
