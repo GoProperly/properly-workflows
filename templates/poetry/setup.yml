@@ -1,0 +1,39 @@
+name: Setup Poetry
+
+on:
+  workflow_call:
+    inputs:
+      python_version_file:
+        required: true
+        type: string
+    secrets:
+      SSH_PRIVATE_KEY:
+        required: true
+      PIP_GEMFURY_DEPLOY_TOKEN:
+        required: true
+
+jobs:
+  setup_poetry:
+    name: Setup Poetry
+    runs-on: ubuntu-latest
+    steps:
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install poetry
+        run: pipx install poetry
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version-file: ${{ inputs.python_version_file }}
+
+      # Poetry must explicitly be told to use the expected version https://github.com/actions/setup-python/issues/374
+      - name: Configure poetry
+        run: |
+          poetry env use $(cat ${{ inputs.python_version_file }})
+          poetry config http-basic.properly "${{ secrets.PIP_GEMFURY_DEPLOY_TOKEN }}" NOPASS
