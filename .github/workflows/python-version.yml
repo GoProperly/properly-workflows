@@ -6,9 +6,6 @@ on:
       python_version_file:
         required: true
         type: string
-    secrets:
-      SSH_PRIVATE_KEY:
-        required: true
 
 jobs:
   python_versioon:
@@ -17,10 +14,6 @@ jobs:
     outputs:
       version: ${{ steps.python_version.outputs.version }}
     steps:
-      - uses: webfactory/ssh-agent@v0.5.4
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
       - name: Checkout python version file
         uses: Bhacaz/checkout-files@v2
         with:

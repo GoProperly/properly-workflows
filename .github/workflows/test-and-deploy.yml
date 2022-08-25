@@ -1,0 +1,106 @@
+name: Setup Poetry
+
+on:
+  workflow_call:
+    inputs:
+      python_version_file:
+        required: true
+        type: string
+      working_directory:
+        required: false
+        default: '.'
+        type: string
+
+jobs:
+  python_version:
+    uses: /.github/workflows/python-version.yml@infr-153-create-shared-test_and_deploy-for-poetry
+    with:
+      python_version_file: ${{ inputs.python_version_file }}
+
+  test_and_deploy:
+    name: Test & Deploy
+    needs: python_version
+    runs-on: ubuntu-latest
+    concurrency: test-deploy-${{ github.repository }}
+
+    env:
+      SLS_DEBUG: "*"
+
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
+
+    steps:
+      - name: Debug Step
+        run: echo ::debug::${{ needs.python_version.outputs.version }}
+
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ needs.python_version.outputs.version }}
+
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Install poetry
+        run: pipx install poetry
+
+      # Poetry must explicitly be told to use the expected version https://github.com/actions/setup-python/issues/374
+      - name: Install dependencies and run checks
+        run: |
+          poetry env use ${{ needs.python_version.outputs.version }}
+          poetry config http-basic.properly "${{ secrets.PIP_GEMFURY_DEPLOY_TOKEN }}" NOPASS
+          poetry install
+          npm install
+          poetry run inv lint
+          poetry run inv test --junitxml="tests/results.xml"
+          
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v1
+        if: always()
+        with:
+          files: "properties/tests/*.xml"
+          comment_mode: "always"
+
+      - name: Upload metadata to Datadog
+        run: poetry run inv datadog-ci
+        env:
+          DATADOG_API_KEY: ${{ secrets.DD_API_KEY }}
+
+      - name: Start deployment (prod)
+        id: deployment_prod
+        if: github.ref == 'refs/heads/master'
+        uses: bobheadxi/deployments@v1
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: prod
+
+      - name: Create domain (prod)
+        if: github.ref == 'refs/heads/master'
+        run: npx sls create_domain --stage prod
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+
+      - name: Deploy (prod)
+        if: github.ref == 'refs/heads/master'
+        run: poetry run inv deploy --stage prod
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          PROPERLY_PRICE_ESTIMATE_API_SECRET: ${{ secrets.PROPERLY_PRICE_ESTIMATE_API_SECRET }}
+
+      - name: Update deployment status (prod)
+        uses: bobheadxi/deployments@v1
+        if: always() && github.ref == 'refs/heads/master'
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          status: ${{ job.status }}
+          env: ${{ steps.deployment_prod.outputs.env }}
+          deployment_id: ${{ steps.deployment_prod.outputs.deployment_id }}
