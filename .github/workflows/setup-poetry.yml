@@ -11,8 +11,6 @@ on:
         default: '.'
         type: string
     secrets:
-      # SSH_PRIVATE_KEY:
-      #   required: true
       PIP_GEMFURY_DEPLOY_TOKEN:
         required: true
 
@@ -20,26 +18,15 @@ jobs:
   setup_poetry:
     name: Setup Poetry
     runs-on: ubuntu-latest
-    # defaults:
-    #   run:
-    #     working-directory: ${{ inputs.working_directory }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
 
     steps:
-      # - uses: webfactory/ssh-agent@v0.5.4
-      #   with:
-      #     ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
       - name: Checkout python version file
         uses: Bhacaz/checkout-files@v2
         with:
           files: ${{ inputs.python_version_file }} properties/pyproject.toml
-
-      - name: Debug Step 1
-        id: ls
-        run: echo ::set-output name=templs::$(echo $(ls))
-
-      - name: Debug Step 2
-        run: echo ::debug::${{ steps.ls.outputs.templs }}
 
       - name: Install poetry
         run: pipx install poetry
@@ -47,5 +34,5 @@ jobs:
       # Poetry must explicitly be told to use the expected version https://github.com/actions/setup-python/issues/374
       - name: Configure poetry
         run: |
-          poetry env use $(cat ${{ inputs.python_version_file }})
+          poetry env use $(cat .python-version)
           poetry config http-basic.properly "${{ secrets.PIP_GEMFURY_DEPLOY_TOKEN }}" NOPASS
