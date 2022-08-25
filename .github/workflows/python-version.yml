@@ -1,0 +1,19 @@
+name: Python Version
+
+on:
+  workflow_call:
+    inputs:
+      python_version_file:
+        required: true
+        type: string
+
+jobs:
+  get_python_version:
+    name: Get Python Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.echo_version.outputs.version }}
+    steps:
+      - name: Echo Version
+        id: echo_version
+        run: echo ::set-output name=version::$(cat ${{ inputs.python_version_file }})
