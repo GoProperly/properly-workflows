@@ -29,5 +29,3 @@ jobs:
       - name: Python Version
         id: python_version
         run: echo ::set-output name=version::$(cat ${{ inputs.python_version_file }})
-
-      

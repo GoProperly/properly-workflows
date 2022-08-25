@@ -3,7 +3,7 @@ name: Setup Poetry
 on:
   workflow_call:
     inputs:
-      python_version:
+      python_version_file:
         required: true
         type: string
       working_directory:
@@ -26,7 +26,7 @@ jobs:
       - name: Checkout python version file
         uses: Bhacaz/checkout-files@v2
         with:
-          files: properties/pyproject.toml
+          files: ${{ inputs.python_version_file }} properties/pyproject.toml
 
       - name: Install poetry
         run: pipx install poetry
@@ -34,5 +34,5 @@ jobs:
       # Poetry must explicitly be told to use the expected version https://github.com/actions/setup-python/issues/374
       - name: Configure poetry
         run: |
-          poetry env use "${{ inputs.python_version }}"
+          poetry env use $(cat ${{ inputs.python_version_file }})
           poetry config http-basic.properly "${{ secrets.PIP_GEMFURY_DEPLOY_TOKEN }}" NOPASS
