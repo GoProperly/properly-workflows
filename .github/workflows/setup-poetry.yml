@@ -28,6 +28,13 @@ jobs:
         with:
           files: ${{ inputs.python_version_file }} properties/pyproject.toml
 
+      - name: Debug Step 1
+        id: ls
+        run: echo ::set-output name=templs::$(echo $(ls -a properties))
+
+      - name: Debug Step 2
+        run: echo ::debug::${{ steps.ls.outputs.templs }}
+
       - name: Install poetry
         run: pipx install poetry
       
