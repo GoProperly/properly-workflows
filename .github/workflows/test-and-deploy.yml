@@ -35,10 +35,6 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
 
     steps:
-      - name: Typecheck
-        if: ${{ inputs.run_typecheck == true }}
-        run: poetry run inv typecheck
-
       - uses: actions/checkout@v3
 
       - uses: actions/setup-python@v4
@@ -64,7 +60,7 @@ jobs:
         run: poetry run inv lint
 
       - name: Typecheck
-        if: ${{ inputs.run_typecheck }}
+        if: ${{ inputs.run_typecheck == true }}
         run: poetry run inv typecheck
 
       - name: Run Tests
