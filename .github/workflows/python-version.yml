@@ -14,8 +14,13 @@ jobs:
     outputs:
       version: ${{ steps.echo_version.outputs.version }}
     steps:
-      - name: Debug Step
-        run: echo ::debug::$(ls -lha)
+      - name: Debug Step 1
+        id: ls
+        run: echo ::set-output name=templs::$(ls)
+
+
+      - name: Debug Step 2
+        run: echo ::debug::${{ steps.ls.outputs.templs }}
 
       - name: Echo Version
         id: echo_version
