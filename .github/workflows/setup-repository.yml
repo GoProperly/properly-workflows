@@ -25,7 +25,7 @@ jobs:
   setup_python:
     needs: setup_repository
     outputs:
-      version: ${{ steps.python_version.outputs.version }}
+      python_version: ${{ steps.python_version.outputs.version }}
     steps:
       - name: Python Version
         id: python_version
