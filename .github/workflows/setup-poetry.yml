@@ -26,11 +26,6 @@ jobs:
       - name: Install poetry
         run: pipx install poetry
       
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ inputs.python_version }}
-
       # Poetry must explicitly be told to use the expected version https://github.com/actions/setup-python/issues/374
       - name: Configure poetry
         run: |
