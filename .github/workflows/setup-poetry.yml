@@ -42,7 +42,6 @@ jobs:
 
       # Poetry must explicitly be told to use the expected version https://github.com/actions/setup-python/issues/374
       - name: Configure poetry
-        workflow
         run: |
           poetry env use "${{ inputs.python_version }}"
           poetry config http-basic.properly "${{ secrets.PIP_GEMFURY_DEPLOY_TOKEN }}" NOPASS
