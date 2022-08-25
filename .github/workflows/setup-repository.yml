@@ -1,0 +1,37 @@
+name: Setup Repository and Python
+
+on:
+  workflow_call:
+    inputs:
+      python_version_file:
+        required: true
+        type: string
+    secrets:
+      SSH_PRIVATE_KEY:
+        required: true
+
+jobs:
+  setup_repository:
+    name: Setup Repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+  
+  setup_python:
+    needs: setup_repository
+    outputs:
+      version: ${{ steps.python_version.outputs.version }}
+    steps:
+      - name: Python Version
+        id: python_version
+        run: echo ::set-output name=version::$(cat ${{ inputs.python_version_file }})
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ steps.python_version.outputs.version }}

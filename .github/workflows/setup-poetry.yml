@@ -11,8 +11,6 @@ on:
         default: '.'
         type: string
     secrets:
-      SSH_PRIVATE_KEY:
-        required: true
       PIP_GEMFURY_DEPLOY_TOKEN:
         required: true
 
@@ -25,13 +23,6 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
 
     steps:
-      - uses: webfactory/ssh-agent@v0.5.4
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
       - name: Install poetry
         run: pipx install poetry
       
