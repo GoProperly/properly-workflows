@@ -31,8 +31,7 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
 
     steps:
-      - name: Debug Step
-        run: echo ::debug::${{ needs.python_version.outputs.version }}
+      - run: echo '${{toJSON(needs)}}'
 
       - uses: actions/checkout@v3
 
