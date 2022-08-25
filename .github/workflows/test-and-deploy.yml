@@ -60,7 +60,7 @@ jobs:
         run: poetry run inv lint
 
       - name: Typecheck
-        if: inputs.run_typecheck
+        if: ${{ inputs.run_typecheck }}
         run: poetry run inv typecheck
 
       - name: Run Tests
