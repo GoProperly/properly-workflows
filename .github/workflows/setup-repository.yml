@@ -24,7 +24,7 @@ jobs:
 
       - name: Debug Step 1
         id: ls
-        run: echo ::set-output name=templs::$(echo $(pwd))
+        run: echo ::set-output name=templs::$(echo $(ls))
 
       - name: Debug Step 2
         run: echo ::debug::${{ steps.ls.outputs.templs }}
