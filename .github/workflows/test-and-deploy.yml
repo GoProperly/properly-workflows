@@ -31,8 +31,6 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
 
     steps:
-      - run: echo '${{toJSON(needs)}}'
-
       - uses: actions/checkout@v3
 
       - uses: actions/setup-python@v4
