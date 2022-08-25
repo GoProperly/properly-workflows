@@ -11,6 +11,8 @@ on:
         default: '.'
         type: string
     secrets:
+      # SSH_PRIVATE_KEY:
+      #   required: true
       PIP_GEMFURY_DEPLOY_TOKEN:
         required: true
 
@@ -23,10 +25,21 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
 
     steps:
+      # - uses: webfactory/ssh-agent@v0.5.4
+      #   with:
+      #     ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
       - name: Checkout python version file
         uses: Bhacaz/checkout-files@v2
         with:
           files: ${{ inputs.python_version_file }} properties/pyproject.toml
+
+      - name: Debug Step 1
+        id: ls
+        run: echo ::set-output name=templs::$(echo $(ls))
+
+      - name: Debug Step 2
+        run: echo ::debug::${{ steps.ls.outputs.templs }}
 
       - name: Install poetry
         run: pipx install poetry
