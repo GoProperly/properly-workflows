@@ -13,7 +13,11 @@ on:
       run_typecheck:
         required: false
         default: false
-        type: string
+        type: boolean
+      run_datadog_ci:
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   python_version:
@@ -74,6 +78,7 @@ jobs:
           comment_mode: "always"
 
       - name: Upload metadata to Datadog
+        if: ${{ inputs.run_datadog_ci }}
         run: poetry run inv datadog-ci
         env:
           DATADOG_API_KEY: ${{ secrets.DD_API_KEY }}
