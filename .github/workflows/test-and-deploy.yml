@@ -13,7 +13,7 @@ on:
 
 jobs:
   python_version:
-    uses: /.github/workflows/python-version.yml@infr-153-create-shared-test_and_deploy-for-poetry
+    uses: ./.github/workflows/python-version.yml@infr-153-create-shared-test_and_deploy-for-poetry
     with:
       python_version_file: ${{ inputs.python_version_file }}
 
