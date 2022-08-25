@@ -14,6 +14,8 @@ jobs:
   setup_repository:
     name: Setup Repository
     runs-on: ubuntu-latest
+    outputs:
+      python_version: ${{ steps.python_version.outputs.version }}
     steps:
       - uses: webfactory/ssh-agent@v0.5.4
         with:
@@ -22,19 +24,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Debug Step 1
-        id: ls
-        run: echo ::set-output name=templs::$(echo $(ls))
-
-      - name: Debug Step 2
-        run: echo ::debug::${{ steps.ls.outputs.templs }}
-  
-  setup_python:
-    needs: setup_repository
-    runs-on: ubuntu-latest
-    outputs:
-      python_version: ${{ steps.python_version.outputs.version }}
-    steps:
       - name: Debug Step 1
         id: ls
         run: echo ::set-output name=templs::$(echo $(ls))
