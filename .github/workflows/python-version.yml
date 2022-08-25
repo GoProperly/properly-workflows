@@ -1,4 +1,4 @@
-name: Setup Repository and Python
+name: Python Version
 
 on:
   workflow_call:
@@ -11,18 +11,20 @@ on:
         required: true
 
 jobs:
-  setup_repository:
-    name: Setup Repository
+  python_versioon:
+    name: Python Version
     runs-on: ubuntu-latest
     outputs:
-      python_version: ${{ steps.python_version.outputs.version }}
+      version: ${{ steps.python_version.outputs.version }}
     steps:
       - uses: webfactory/ssh-agent@v0.5.4
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout python version file
+        uses: Bhacaz/checkout-files@v2
+        with:
+          files: ${{ inputs.python_version_file }}
 
       - name: Debug Step 1
         id: ls
@@ -35,7 +37,4 @@ jobs:
         id: python_version
         run: echo ::set-output name=version::$(cat ${{ inputs.python_version_file }})
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ steps.python_version.outputs.version }}
+      
