@@ -6,6 +6,10 @@ on:
       python_version_file:
         required: true
         type: string
+    outputs:
+      version:
+        description: "The python version extracted from 'python_version_file'"
+        value: ${{ jobs.python_versioon.outputs.version }}
 
 jobs:
   python_versioon:
