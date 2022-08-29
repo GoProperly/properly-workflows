@@ -4,24 +4,16 @@ on:
   workflow_call:
     inputs:
       python_version_file:
-        required: false
         default: '.python-version'
         type: string
       working_directory:
-        required: false
         default: '.'
         type: string
       deploy_staging:
-        required: false
-        default: false
         type: boolean
       run_typecheck:
-        required: false
-        default: false
         type: boolean
       run_datadog_ci:
-        required: false
-        default: false
         type: boolean
 
 jobs:
