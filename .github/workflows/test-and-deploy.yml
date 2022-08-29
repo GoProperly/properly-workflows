@@ -36,6 +36,10 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
 
     steps:
+      - run: echo ::debug::${{ inputs.deploy_staging }}
+      - run: echo ::debug::${{ inputs.run_typecheck }}
+      - run: echo ::debug::${{ inputs.run_datadog_ci }}
+      
       - uses: actions/checkout@v3
 
       - uses: actions/setup-python@v4
