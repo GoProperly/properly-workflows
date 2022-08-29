@@ -11,6 +11,10 @@ on:
         required: false
         default: '.'
         type: string
+      deploy_staging:
+        required: false
+        default: false
+        type: boolean
       run_typecheck:
         required: false
         default: false
@@ -65,12 +69,12 @@ jobs:
         run: poetry run inv lint
 
       - name: Typecheck
-        if: ${{ inputs.run_typecheck == true }}
+        if: inputs.run_typecheck 
         run: poetry run inv typecheck
 
       - name: Run Tests
         run: poetry run inv test --junitxml="tests/results.xml"
-          
+
       - name: Publish test results
         uses: EnricoMi/publish-unit-test-result-action@v1
         if: always()
@@ -79,10 +83,46 @@ jobs:
           comment_mode: "always"
 
       - name: Upload metadata to Datadog
-        if: ${{ inputs.run_datadog_ci }}
+        if: inputs.run_datadog_ci
         run: poetry run inv datadog-ci
         env:
           DATADOG_API_KEY: ${{ secrets.DD_API_KEY }}
+
+      - name: Start deployment (staging)
+        id: deployment_staging
+        if: github.ref == 'refs/heads/main' && inputs.deploy_staging
+        uses: bobheadxi/deployments@v1
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: staging
+
+      - name: Create domain (staging)
+        if: github.ref == 'refs/heads/main' && inputs.deploy_staging
+        run: npx sls create_domain --stage staging
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+
+      - name: Deploy (staging)
+        if: github.ref == 'refs/heads/main' && inputs.deploy_staging
+        run: poetry run inv deploy --stage staging
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+
+      - name: Update deployment status (staging)
+        if: always() && github.ref == 'refs/heads/main' && inputs.deploy_staging
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          status: ${{ job.status }}
+          env: ${{ steps.deployment_staging.outputs.env }}
+          env_url: https://template-python-serverless-fastapi-staging.api.properly.ca/docs
+          deployment_id: ${{ steps.deployment_staging.outputs.deployment_id }}
 
       - name: Start deployment (prod)
         id: deployment_prod
