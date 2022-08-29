@@ -39,7 +39,7 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
 
     steps:
-      - if: '${{ inputs.default_branch }}' == 'main'
+      - if: ${{ inputs.default_branch == 'main' }}
         run: echo ::debug::if-evaluated-to-true
 
       - uses: actions/checkout@v3
