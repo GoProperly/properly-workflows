@@ -6,6 +6,9 @@ on:
       python_version_file:
         default: '.python-version'
         type: string
+      default_branch:
+        default: 'main'
+        type: string
       working_directory:
         default: '.'
         type: string
@@ -36,6 +39,9 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
 
     steps:
+      - if: '${{ inputs.default_branch }}' == 'main'
+        run: echo ::debug::if-evaluated-to-true
+
       - uses: actions/checkout@v3
 
       - uses: actions/setup-python@v4
@@ -45,6 +51,7 @@ jobs:
       - uses: webfactory/ssh-agent@v0.5.4
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          cache: 'poetry'
 
       - name: Install poetry
         run: pipx install poetry
@@ -82,7 +89,7 @@ jobs:
 
       - name: Start deployment (staging)
         id: deployment_staging
-        if: github.ref == 'refs/heads/main' && inputs.deploy_staging
+        if: github.ref == 'refs/heads/${{ inputs.default_branch }}' && inputs.deploy_staging
         uses: bobheadxi/deployments@v1
         with:
           step: start
@@ -90,7 +97,7 @@ jobs:
           env: staging
 
       - name: Create domain (staging)
-        if: github.ref == 'refs/heads/main' && inputs.deploy_staging
+        if: github.ref == 'refs/heads/${{ inputs.default_branch }}' && inputs.deploy_staging
         run: npx sls create_domain --stage staging
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -98,7 +105,7 @@ jobs:
           DD_API_KEY: ${{ secrets.DD_API_KEY }}
 
       - name: Deploy (staging)
-        if: github.ref == 'refs/heads/main' && inputs.deploy_staging
+        if: github.ref == 'refs/heads/${{ inputs.default_branch }}' && inputs.deploy_staging
         run: poetry run inv deploy --stage staging
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -106,7 +113,7 @@ jobs:
           DD_API_KEY: ${{ secrets.DD_API_KEY }}
 
       - name: Update deployment status (staging)
-        if: always() && github.ref == 'refs/heads/main' && inputs.deploy_staging
+        if: always() && github.ref == 'refs/heads/${{ inputs.default_branch }}' && inputs.deploy_staging
         uses: bobheadxi/deployments@v1
         with:
           step: finish
