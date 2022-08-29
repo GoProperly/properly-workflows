@@ -39,8 +39,8 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
 
     steps:
-      - if: ${{ inputs.default_branch == 'main' }}
-        run: echo ::debug::if-evaluated-to-true
+      - if: ${{ github.ref == format('refs/heads/{0}', inputs.default_branch) }}
+        run: echo ::debug::if-evaluated-to-true--${{ github.ref }}
 
       - uses: actions/checkout@v3
 
