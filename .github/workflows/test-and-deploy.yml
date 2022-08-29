@@ -44,17 +44,17 @@ jobs:
 
       - uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v4
-        with:
-          python-version: ${{ needs.python_version.outputs.version }}
-          cache: 'poetry'
-
       - uses: webfactory/ssh-agent@v0.5.4
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Install poetry
         run: pipx install poetry
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ needs.python_version.outputs.version }}
+          cache: 'poetry'
 
       # Poetry must explicitly be told to use the expected version https://github.com/actions/setup-python/issues/374
       - name: Install dependencies
