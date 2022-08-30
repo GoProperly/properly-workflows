@@ -4,6 +4,7 @@ on:
   workflow_call:
     inputs:
       python_version_file:
+        description: 'The location of .python-version file of the caller workflow repository'
         required: true
         type: string
     outputs:
