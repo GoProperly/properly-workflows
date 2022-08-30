@@ -15,6 +15,7 @@ jobs:
     with:
       python_version_file: properties/.python-version
       working_directory: properties
+      default_branch: master
       run_datadog_ci: true
     secrets: inherit
 ```
