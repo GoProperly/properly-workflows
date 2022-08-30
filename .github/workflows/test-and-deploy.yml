@@ -1,0 +1,163 @@
+name: Test & Deploy
+
+on:
+  workflow_call:
+    inputs:
+      python_version_file:
+        description: 'The location of .python-version file of the caller workflow repository'
+        default: '.python-version'
+        type: string
+      default_branch:
+        description: 'The production branch of the caller workflow repository'
+        default: 'main'
+        type: string
+      working_directory:
+        description: 'The working directory of the caller workflow repository'
+        default: '.'
+        type: string
+      deploy_staging:
+        description: 'A boolean value to run deploy to staging steps (default false)'
+        type: boolean
+      run_typecheck:
+        description: 'A boolean value to run typecheck step (default false)'
+        type: boolean
+      run_datadog_ci:
+        description: 'A boolean value to run datadog step (default false)'
+        type: boolean
+
+jobs:
+  python_version:
+    uses: ./.github/workflows/python-version.yml
+    with:
+      python_version_file: ${{ inputs.python_version_file }}
+
+  test_and_deploy:
+    name: Test & Deploy
+    needs: python_version
+    runs-on: ubuntu-latest
+    concurrency: test-deploy-${{ github.repository }}
+
+    env:
+      SLS_DEBUG: "*"
+
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Install poetry
+        run: pipx install poetry
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ needs.python_version.outputs.version }}
+          cache: 'poetry'
+
+      # Poetry must explicitly be told to use the expected version https://github.com/actions/setup-python/issues/374
+      - name: Install dependencies
+        run: |
+          poetry env use ${{ needs.python_version.outputs.version }}
+          poetry config http-basic.properly "${{ secrets.PIP_GEMFURY_DEPLOY_TOKEN }}" NOPASS
+          poetry install
+          npm install
+
+      - name: Lint
+        run: poetry run inv lint
+
+      - name: Typecheck
+        if: inputs.run_typecheck 
+        run: poetry run inv typecheck
+
+      - name: Run Tests
+        run: poetry run inv test --junitxml="tests/results.xml"
+
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v1
+        if: always()
+        with:
+          files: "${{ inputs.working_directory }}/tests/*.xml"
+          comment_mode: "always"
+
+      - name: Upload metadata to Datadog
+        if: inputs.run_datadog_ci
+        run: poetry run inv datadog-ci
+        env:
+          DATADOG_API_KEY: ${{ secrets.DD_API_KEY }}
+
+      - name: Start deployment (staging)
+        id: deployment_staging
+        if: ${{ github.ref == format('refs/heads/{0}', inputs.default_branch) && inputs.deploy_staging }}
+        uses: bobheadxi/deployments@v1
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: staging
+
+      - name: Create domain (staging)
+        if: ${{ github.ref == format('refs/heads/{0}', inputs.default_branch) && inputs.deploy_staging }}
+        run: npx sls create_domain --stage staging
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+
+      - name: Deploy (staging)
+        if: ${{ github.ref == format('refs/heads/{0}', inputs.default_branch) && inputs.deploy_staging }}
+        run: poetry run inv deploy --stage staging
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+
+      - name: Update deployment status (staging)
+        if: ${{ always() && github.ref == format('refs/heads/{0}', inputs.default_branch) && inputs.deploy_staging }}
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          status: ${{ job.status }}
+          env: ${{ steps.deployment_staging.outputs.env }}
+          env_url: https://template-python-serverless-fastapi-staging.api.properly.ca/docs
+          deployment_id: ${{ steps.deployment_staging.outputs.deployment_id }}
+
+      - name: Start deployment (prod)
+        id: deployment_prod
+        if: ${{ github.ref == format('refs/heads/{0}', inputs.default_branch) }}
+        uses: bobheadxi/deployments@v1
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: prod
+
+      - name: Create domain (prod)
+        if: ${{ github.ref == format('refs/heads/{0}', inputs.default_branch) }}
+        run: npx sls create_domain --stage prod
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+
+      - name: Deploy (prod)
+        if: ${{ github.ref == format('refs/heads/{0}', inputs.default_branch) }}
+        run: poetry run inv deploy --stage prod
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          PROPERLY_PRICE_ESTIMATE_API_SECRET: ${{ secrets.PROPERLY_PRICE_ESTIMATE_API_SECRET }}
+
+      - name: Update deployment status (prod)
+        uses: bobheadxi/deployments@v1
+        if: ${{ always() && github.ref == format('refs/heads/{0}', inputs.default_branch) }}
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          status: ${{ job.status }}
+          env: ${{ steps.deployment_prod.outputs.env }}
+          deployment_id: ${{ steps.deployment_prod.outputs.deployment_id }}
