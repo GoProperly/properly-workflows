@@ -4,19 +4,25 @@ on:
   workflow_call:
     inputs:
       python_version_file:
+        description: 'The location of .python-version file of the caller workflow repository'
         default: '.python-version'
         type: string
       default_branch:
+        description: 'The production branch of the caller workflow repository'
         default: 'main'
         type: string
       working_directory:
+        description: 'The working directory of the caller workflow repository'
         default: '.'
         type: string
       deploy_staging:
+        description: 'A boolean value to run deploy to staging steps (default false)'
         type: boolean
       run_typecheck:
+        description: 'A boolean value to run typecheck step (default false)'
         type: boolean
       run_datadog_ci:
+        description: 'A boolean value to run datadog step (default false)'
         type: boolean
 
 jobs:
