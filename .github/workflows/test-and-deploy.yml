@@ -98,7 +98,7 @@ jobs:
 
       - name: Start deployment (staging)
         id: deployment_staging
-        if: ${{ github.ref == format('refs/heads/{0}', inputs.default_branch) && inputs.deploy_staging }}
+        if: ${{ inputs.deploy_staging }}
         uses: bobheadxi/deployments@v1
         with:
           step: start
@@ -106,7 +106,7 @@ jobs:
           env: staging
 
       - name: Create domain (staging)
-        if: ${{ github.ref == format('refs/heads/{0}', inputs.default_branch) && inputs.deploy_staging }}
+        if: ${{ inputs.deploy_staging }}
         run: npx sls create_domain --stage staging
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -114,7 +114,7 @@ jobs:
           DD_API_KEY: ${{ secrets.DD_API_KEY }}
 
       - name: Deploy (staging)
-        if: ${{ github.ref == format('refs/heads/{0}', inputs.default_branch) && inputs.deploy_staging }}
+        if: ${{ inputs.deploy_staging }}
         run: poetry run inv deploy --stage staging
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -122,7 +122,7 @@ jobs:
           DD_API_KEY: ${{ secrets.DD_API_KEY }}
 
       - name: Update deployment status (staging)
-        if: ${{ always() && github.ref == format('refs/heads/{0}', inputs.default_branch) && inputs.deploy_staging }}
+        if: ${{ always() && inputs.deploy_staging }}
         uses: bobheadxi/deployments@v1
         with:
           step: finish
