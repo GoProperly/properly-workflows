@@ -1,0 +1,32 @@
+name: Python Version
+
+on:
+  workflow_call:
+    inputs:
+      python_version_file:
+        description: 'The location of .python-version file of the caller workflow repository'
+        required: true
+        type: string
+    outputs:
+      version:
+        description: "The python version extracted from 'python_version_file'"
+        value: ${{ jobs.python_version.outputs.version }}
+
+jobs:
+  python_version:
+    name: Python Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.python_version.outputs.version }}
+    steps:
+      - name: Checkout python version file
+        uses: Bhacaz/checkout-files@v2
+        with:
+          files: ${{ inputs.python_version_file }}
+
+      - name: Python Version
+        id: python_version
+        run: echo ::set-output name=version::$(cat ${{ inputs.python_version_file }})
+
+      - name: Report extracted Python version
+        run: echo ::debug::${{ steps.python_version.outputs.version }}
