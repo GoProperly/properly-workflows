@@ -38,21 +38,19 @@ jobs:
 ```
 We can reference reusable workflow files using one of the following syntaxes:
 
-```
-{owner}/{repo}/.github/workflows/{filename}@{ref}`
-```
+1. For reusable workflows in public repositories:
 
-for reusable workflows in public repositories;
-
+```
+{owner}/{repo}/.github/workflows/{filename}@{ref}
+```
+2. For reusable workflows in the same repository:
 ```
 ./.github/workflows/{filename}
 ```
 
-for reusable workflows in the same repository.
-
 `{ref}` can be any of:
 - SHA
 - a release tag, or
-- a branch name.
+- a branch name
 
 Using the commit SHA is the safest for stability and security. For more information, see ["Security hardening for GitHub Actions."](https://docs.github.com/en/actions/learn-github-actions/security-hardening-for-github-actions#reusing-third-party-workflows) If you use the second syntax option (without `{owner}/{repo} and @{ref}`) the called workflow is from the same commit as the caller workflow.
