@@ -1,0 +1,163 @@
+name: Test & Deploy Custom Domain
+
+on:
+  workflow_call:
+    inputs:
+      python_version_file:
+        description: 'The location of .python-version file of the caller workflow repository'
+        default: '.python-version'
+        type: string
+      working_directory:
+        description: 'The working directory of the caller workflow repository'
+        default: '.'
+        type: string
+      run_typecheck:
+        description: 'A boolean value to run typecheck step (default false)'
+        type: boolean
+
+jobs:
+  check_comment:
+    name: Check comment
+    # check if the comments come from pull request and starts with 'deploy STAGE='
+    if: contains(github.event.comment.html_url, '/pull/') && startsWith(github.event.comment.body, 'deploy STAGE=')
+    runs-on: ubuntu-latest
+    outputs:
+      domain_name: ${{ steps.extract_domain_name.outputs.extracted_domain }}
+      database_cluster: ${{ steps.extract_database_cluster.outputs.extracted_database_cluster || 'staging' }}
+
+    steps:
+      - name: Extract Domain Name
+        id: extract_domain_name
+        run: echo ::set-output name=extracted_domain::$(echo ${{ github.event.comment.body }} | sed -n 's/^deploy STAGE=\([a-zA-Z0-9.-]*\).*/\L\1/p')
+
+      - name: Debug stage output
+        run: echo ::debug::${{ steps.extract_domain_name.outputs.extracted_domain }}
+
+      - name: Extract Database Cluster
+        id: extract_database_cluster
+        # if stage is staging, DB Cluster will not override
+        if: steps.extract_domain_name.outputs.extracted_domain != '' && steps.extract_domain_name.outputs.extracted_domain != 'staging'
+        run: echo ::set-output name=extracted_database_cluster::$(echo ${{ github.event.comment.body }} | sed -n 's/^deploy STAGE=\([a-zA-Z0-9.-]*\) PRODUCT_DATABASE_CLUSTER=\([a-zA-Z0-9._-]*\).*/\2/p')
+
+      - name: Debug cluster output
+        run: echo ::debug::${{ steps.extract_database_cluster.outputs.extracted_database_cluster }}
+
+
+  python_version:
+    uses: ./.github/workflows/python-version.yml
+    with:
+      python_version_file: ${{ inputs.python_version_file }}
+
+  test_and_deploy:
+    name: Test & Deploy Custom Domain
+    needs: [check_comment, python_version]
+    runs-on: ubuntu-latest
+    concurrency: test-deploy-custom-${{ github.repository }}
+    if: |
+      needs.check_comment.outputs.domain_name != '' &&
+      needs.check_comment.outputs.domain_name != 'prod' &&
+      needs.check_comment.outputs.domain_name != 'production' &&
+      needs.check_comment.outputs.database_cluster != 'prod' &&
+      needs.check_comment.outputs.database_cluster != 'production'
+
+    env:
+      SLS_DEBUG: "*"
+
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
+
+    steps:
+      - name: Acknowledge request
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          reactions: "+1"
+
+      - name: Get pull request ref
+        id: get_pull_request_ref
+        uses: octokit/request-action@v2.x
+        with:
+          route: GET /repos/:repository/pulls/:issue_id
+          repository: ${{ github.repository }}
+          issue_id: ${{ github.event.issue.number }}
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ fromJson(steps.get_pull_request_ref.outputs.data).head.ref }}
+
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Install poetry
+        run: pipx install poetry
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ needs.python_version.outputs.version }}
+          cache: 'poetry'
+
+      # Poetry must explicitly be told to use the expected version https://github.com/actions/setup-python/issues/374
+      - name: Install dependencies
+        run: |
+          poetry env use ${{ needs.python_version.outputs.version }}
+          poetry config http-basic.properly "${{ secrets.PIP_GEMFURY_DEPLOY_TOKEN }}" NOPASS
+          poetry install
+          npm install
+
+      - name: Lint
+        run: poetry run inv lint
+
+      - name: Typecheck
+        if: inputs.run_typecheck
+        run: poetry run inv typecheck
+
+      - name: Run Tests
+        run: poetry run inv test --junitxml="tests/results.xml"
+
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v1
+        if: always()
+        with:
+          files: "${{ inputs.working_directory }}/tests/*.xml"
+          comment_mode: "always"
+
+      - name: Start deployment
+        id: deployment_custom
+        uses: bobheadxi/deployments@v1
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: ${{ needs.check_comment.outputs.domain_name }}
+          ref: ${{ fromJson(steps.get_pull_request_ref.outputs.data).head.ref }}
+
+      - name: Create custom domain
+        run: npx sls create_domain --stage ${{ steps.deployment_custom.outputs.env }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+
+      - name: Deploy custom domain
+        run: poetry run inv deploy --stage ${{ steps.deployment_custom.outputs.env }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          PROPERLY_PRICE_ESTIMATE_API_SECRET: ${{ secrets.PROPERLY_PRICE_ESTIMATE_API_SECRET }}
+          PRODUCT_DATABASE_CLUSTER: ${{ needs.check_comment.outputs.database_cluster }}
+
+      - name: Update deployment status
+        if: always()
+        uses: bobheadxi/deployments@v1
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          status: ${{ job.status }}
+          env: ${{ steps.deployment_custom.outputs.env }}
+          deployment_id: ${{ steps.deployment_custom.outputs.deployment_id }}
+          ref: ${{ fromJson(steps.get_pull_request_ref.outputs.data).head.ref }}

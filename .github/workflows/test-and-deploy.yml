@@ -15,6 +15,12 @@ on:
         description: 'The working directory of the caller workflow repository'
         default: '.'
         type: string
+      staging_env_url:
+        description: 'URL for the deployed staging env (default "")'
+        type: string
+      prod_env_url:
+        description: 'URL for the deployed prod env (default "")'
+        type: string
       deploy_staging:
         description: 'A boolean value to run deploy to staging steps (default false)'
         type: boolean
@@ -123,7 +129,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           status: ${{ job.status }}
           env: ${{ steps.deployment_staging.outputs.env }}
-          env_url: https://template-python-serverless-fastapi-staging.api.properly.ca/docs
+          env_url: ${{ inputs.staging_env_url }}
           deployment_id: ${{ steps.deployment_staging.outputs.deployment_id }}
 
       - name: Start deployment (prod)
@@ -160,4 +166,5 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           status: ${{ job.status }}
           env: ${{ steps.deployment_prod.outputs.env }}
+          env_url: ${{ inputs.prod_env_url }}
           deployment_id: ${{ steps.deployment_prod.outputs.deployment_id }}

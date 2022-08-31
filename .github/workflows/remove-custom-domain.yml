@@ -1,0 +1,114 @@
+name: Remove Custom Domain
+
+on:
+  workflow_call:
+    inputs:
+      python_version_file:
+        description: 'The location of .python-version file of the caller workflow repository'
+        default: '.python-version'
+        type: string
+      working_directory:
+        description: 'The working directory of the caller workflow repository'
+        default: '.'
+        type: string
+
+jobs:
+  check_comment:
+    name: Check comment
+    # check if the comments come from pull request and starts with 'remove STAGE='
+    if: contains(github.event.comment.html_url, '/pull/') && startsWith(github.event.comment.body, 'remove STAGE=')
+    runs-on: ubuntu-latest
+    outputs:
+      stage_name: ${{ steps.extract_stage_name.outputs.stage_name }}
+
+    steps:
+      - name: Extract Stage Name
+        id: extract_stage_name
+        run: echo ::set-output name=stage_name::$(echo ${{ github.event.comment.body }} | sed -n 's/^remove STAGE=\([a-zA-Z0-9.-]*\).*/\1/p')
+      
+      - name: Debug stage output
+        run: echo ::debug::${{ steps.extract_stage_name.outputs.stage_name }}
+
+  python_version:
+    uses: ./.github/workflows/python-version.yml
+    with:
+      python_version_file: ${{ inputs.python_version_file }}
+
+  remove_custom_domain:
+    name: Remove Custom Domain
+    needs: [check_comment, python_version]
+    runs-on: ubuntu-latest
+    if: |
+      needs.check_comment.outputs.stage_name != '' && 
+      needs.check_comment.outputs.stage_name != 'prod' &&
+      needs.check_comment.outputs.stage_name != 'production' &&
+      needs.check_comment.outputs.stage_name != 'staging'
+
+    env:
+      SLS_DEBUG: "*"
+
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
+
+    steps:
+      - name: Acknowledge request
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          reactions: "eyes"
+
+      - name: Get pull request ref
+        id: get_pull_request_ref
+        uses: octokit/request-action@v2.x
+        with:
+          route: GET /repos/:repository/pulls/:issue_id
+          repository: ${{ github.repository }}
+          issue_id: ${{ github.event.issue.number }}
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ fromJson(steps.get_pull_request_ref.outputs.data).head.ref }}
+
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Install poetry
+        run: pipx install poetry
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ needs.python_version.outputs.version }}
+          cache: 'poetry'
+
+      # Poetry must explicitly be told to use the expected version https://github.com/actions/setup-python/issues/374
+      - name: Install dependencies
+        run: |
+          poetry env use ${{ needs.python_version.outputs.version }}
+          poetry config http-basic.properly "${{ secrets.PIP_GEMFURY_DEPLOY_TOKEN }}" NOPASS
+          poetry install
+          npm install
+
+      - name: Remove custom stage
+        run: poetry run inv remove --stage ${{ needs.check_comment.outputs.stage_name }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+
+      - name: Remove custom domain
+        run: npx sls delete_domain --stage ${{ needs.check_comment.outputs.stage_name }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+
+      - name: Update removal status
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          reactions: "+1"
