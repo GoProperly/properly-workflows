@@ -1,0 +1,121 @@
+name: Test & Deploy Staging
+
+on:
+  workflow_call:
+    inputs:
+      python_version_file:
+        description: 'The location of .python-version file of the caller workflow repository'
+        default: '.python-version'
+        type: string
+      working_directory:
+        description: 'The working directory of the caller workflow repository'
+        default: '.'
+        type: string
+
+jobs:
+  python_version:
+    uses: ./.github/workflows/python-version.yml
+    with:
+      python_version_file: ${{ inputs.python_version_file }}
+
+  deploy_staging:
+    # check if the comments come from pull request and includes @deploy
+    if: contains(github.event.comment.html_url, '/pull/') && contains(github.event.comment.body, 'deploy staging')
+    name: Deploy Staging
+    needs: [python_version]
+    runs-on: ubuntu-latest
+
+    env:
+      SLS_DEBUG: "*"
+
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
+
+    steps:
+      - name: Acknowledge deploy requested
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          reactions: "+1"
+
+      - name: Get pull request ref
+        id: get_pull_request_ref
+        uses: octokit/request-action@v2.x
+        with:
+          route: GET /repos/:repository/pulls/:issue_id
+          repository: ${{ github.repository }}
+          issue_id: ${{ github.event.issue.number }}
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ fromJson(steps.get_pull_request_ref.outputs.data).head.ref }}
+
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      # pin version for poetry as higher versions have PEP 440 versioning issues
+      - name: Install poetry
+        run: pipx install poetry==1.1.15
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ needs.python_version.outputs.version }}
+          cache: 'poetry'
+
+      # Poetry must explicitly be told to use the expected version https://github.com/actions/setup-python/issues/374
+      - name: Install dependencies
+        run: |
+          poetry env use ${{ needs.python_version.outputs.version }}
+          poetry config http-basic.properly "${{ secrets.PIP_GEMFURY_DEPLOY_TOKEN }}" NOPASS
+          poetry install
+          npm install
+
+      - name: Lint
+        run: poetry run inv lint
+
+      - name: Typecheck
+        if: inputs.run_typecheck
+        run: poetry run inv typecheck
+
+      - name: Run Tests
+        run: poetry run inv test --junitxml="tests/results.xml"
+
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v1
+        if: always()
+        with:
+          files: "${{ inputs.working_directory }}/tests/*.xml"
+          comment_mode: "always"
+
+      - name: Start deployment
+        id: deployment_staging
+        uses: bobheadxi/deployments@v1
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: staging
+          ref: ${{ fromJson(steps.get_pull_request_ref.outputs.data).head.ref }}
+
+      - name: Deploy (staging)
+        run: poetry run inv deploy --stage staging
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          DD_API_KEY: ${{secrets.DD_API_KEY}}
+
+      - name: Update deployment status
+        uses: bobheadxi/deployments@v1
+        if: always()
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          status: ${{ job.status }}
+          env: ${{ steps.deployment_staging.outputs.env }}
+          env_url: https://7o6wgaql8j.execute-api.us-east-1.amazonaws.com/staging/docs
+          deployment_id: ${{ steps.deployment_staging.outputs.deployment_id }}
+          ref: ${{ fromJson(steps.get_pull_request_ref.outputs.data).head.ref }}
