@@ -23,6 +23,7 @@ jobs:
         uses: Bhacaz/checkout-files@v2
         with:
           files: ${{ inputs.python_version_file }}
+          branch: ${{ github.head_ref || github.ref_name }}
 
       - name: Python Version
         id: python_version
