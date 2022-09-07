@@ -20,7 +20,7 @@ jobs:
 
   deploy_staging:
     # check if the comments come from pull request and includes @deploy
-    if: contains(github.event.comment.html_url, '/pull/') && contains(github.event.comment.body, 'deploy staging')
+    if: contains(github.event.comment.html_url, '/pull/') && contains(github.event.comment.body, 'deploy STAGE=staging')
     name: Deploy Staging
     needs: [python_version]
     runs-on: ubuntu-latest
