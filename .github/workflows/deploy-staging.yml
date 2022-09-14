@@ -14,6 +14,9 @@ on:
       staging_env_url:
         description: 'URL for the deployed staging env (default "")'
         type: string
+      run_typecheck:
+        description: 'A boolean value to run typecheck step (default false)'
+        type: boolean
 
 jobs:
   python_version:
