@@ -160,8 +160,6 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           DD_API_KEY: ${{ secrets.DD_API_KEY }}
-          PROPERLY_PRICE_ESTIMATE_API_SECRET: ${{ secrets.PROPERLY_PRICE_ESTIMATE_API_SECRET }}
-          PROPERLY_ACCOUNT_API_SECRET: ${{secrets.PROPERLY_ACCOUNT_API_SECRET}}
 
       - name: Update deployment status (prod)
         uses: bobheadxi/deployments@v1
