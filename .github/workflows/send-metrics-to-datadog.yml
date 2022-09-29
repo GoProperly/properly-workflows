@@ -1,0 +1,41 @@
+name: Send Github workflow and pull request metrics to Datadog
+
+# A generic workflow to send Github workflow and pull request metrics to
+# Datadog for CI/CD visibility. Wraps `datadog-actions-metrics`.
+#
+# Usage:
+#   In your repository, create a new workflow with the following trigger
+#
+#   ```
+#   on:
+#     workflow_run:
+#       workflows:
+#         - '**'
+#       types:
+#         - completed
+#     pull_request:
+#       types:
+#         - opened
+#         - closed
+#   ```
+#
+#   Call the action in your jobs
+#
+#   ```
+#   jobs:
+#     send:
+#       uses: GoProperly/properly-workflows/.github/workflows/send-metrics-to-datadog.yml@main
+#       secrets: inherit
+#   ```
+
+on: workflow_call
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: int128/datadog-actions-metrics@v1
+        with:
+          datadog-api-key: ${{ secrets.DD_API_KEY }}
+          collect-job-metrics: ${{ github.event.workflow_run.head_branch == github.event.repository.default_branch }}
