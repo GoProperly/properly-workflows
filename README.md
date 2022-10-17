@@ -11,10 +11,16 @@ This repository introduces DRY Github Action workflows that can be used across r
 From time to time there will be some breaking changes introduced to `properly-workflows`. To make the task of upgrading/ downgrading easier this repo makes use of git tags. This repo uses [annotated tags](https://git-scm.com/book/en/v2/Git-Basics-Tagging#_annotated_tags), which typically include a message indicating why the tag change occurred.
 
 It is recommended to create a minor tag when adding any new functionality, but is required to add a major tag when a breaking change is added, as per [semantic versioning](https://semver.org/).
+A tag can be attached to the branch being worked on, and once merged will apply to the merge in `main` branch.
 To add a tag on branch (e.g. after changes have been merged to `main`):
 ```
 git tag -a v1.0 -m "added a breaking change that does X and Y"
 ```
+Tags are not pushed to `origin` by default so when pushing ensure to include `--tags`:
+```
+git push origin HEAD --tags
+```
+
 
 ## Usage
 These workflows can be easily imported by any repository by pointing the `uses` parameter of the `job` to a workflow here. Example for `properties` service repository:
