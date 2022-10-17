@@ -16,6 +16,13 @@ To add a tag on branch (e.g. after changes have been merged to `main`):
 ```
 git tag -a v1.0 -m "added a breaking change that does X and Y"
 ```
+If the tag has already been associated with a different commit and you would like to move it to a new commit (force), use the following:
+```
+git tag -fa v1.0 -m "added a breaking change that does X and Y"
+```
+> The above command will  force the tag `v1.0` to be moved to a new commit. You will need to manually delete the tag from github (must have admin permissions to do so)
+> You cannot force push over an existing tag in github
+
 Tags are not pushed to `origin` by default so when pushing ensure to include `--tags`:
 ```
 git push origin HEAD --tags
