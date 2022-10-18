@@ -7,6 +7,28 @@ Our BE services all have fundamentally the same github actions workflows copy & 
 
 This repository introduces DRY Github Action workflows that can be used across repositories.
 
+## Tags
+From time to time there will be some breaking changes introduced to `properly-workflows`. To make the task of upgrading/ downgrading easier this repo makes use of git tags. This repo uses [annotated tags](https://git-scm.com/book/en/v2/Git-Basics-Tagging#_annotated_tags), which typically include a message indicating why the tag change occurred.
+
+It is recommended to create a minor tag when adding any new functionality, but is required to add a major tag when a breaking change is added, as per [semantic versioning](https://semver.org/).
+A tag can be attached to the branch being worked on, and once merged will apply to the merge in `main` branch.
+To add a tag on branch (e.g. after changes have been merged to `main`):
+```
+git tag -a v1.0 -m "added a breaking change that does X and Y"
+```
+If the tag has already been associated with a different commit and you would like to move it to a new commit (force), use the following:
+```
+git tag -fa v1.0 -m "added a breaking change that does X and Y"
+```
+> The above command will  force the tag `v1.0` to be moved to a new commit. You will need to manually delete the tag from github (must have admin permissions to do so)
+> You cannot force push over an existing tag in github
+
+Tags are not pushed to `origin` by default so when pushing ensure to include `--tags`:
+```
+git push origin HEAD --tags
+```
+
+
 ## Usage
 These workflows can be easily imported by any repository by pointing the `uses` parameter of the `job` to a workflow here. Example for `properties` service repository:
 ```
