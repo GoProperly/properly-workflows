@@ -142,6 +142,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          PRODUCT_DATABASE_CLUSTER: ${{ needs.check_comment.outputs.database_cluster }}
 
       - name: Deploy custom domain
         run: poetry run inv deploy --stage ${{ steps.deployment_custom.outputs.env }}
