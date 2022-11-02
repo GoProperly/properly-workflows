@@ -231,7 +231,7 @@ jobs:
                   value: map(.value) | add \
               }) \
             | from_entries"
-          RAW_SUMMARY=$(jq ${JQ_QUERY} <<< "${{ steps.compute_raw.outputs.RAW }}")
+          RAW_SUMMARY=$(jq "${JQ_QUERY}" <<< "${{ steps.compute_raw.outputs.RAW }}")
           echo "RAW_SUMMARY=${RAW_SUMMARY}" >> $GITHUB_OUTPUT
           echo ::debug::${RAW_SUMMARY}
 
