@@ -232,7 +232,9 @@ jobs:
                   value: map(.value) | add \
               }) \
             | from_entries"
-          echo "RAW_SUMMARY='echo ${{ steps.compute_raw.outputs.RAW }} | jq ${JQ_QUERY}'" >> $GITHUB_OUTPUT
+          RAW_SUMMARY=$(eval "echo ${{ steps.compute_raw.outputs.RAW }} | jq ${JQ_QUERY}")
+          echo "RAW_SUMMARY=${RAW_SUMMARY}" >> $GITHUB_OUTPUT
+          echo ::debug::${RAW_SUMMARY}
 
       - name: Compute cyclomatic complexity metrics
         id: compute_cc
@@ -240,19 +242,31 @@ jobs:
 
       - name: Count number of files
         id: compute_cc_file_count
-        run: echo "CC_FILE_COUNT='echo ${{ steps.compute_cc.outputs.CC }} | jq length'" >> $GITHUB_OUTPUT
+        run: >
+          CC_FILE_COUNT=$(eval "echo ${{ steps.compute_cc.outputs.CC }} | jq length")
+          echo "CC_FILE_COUNT=${CC_FILE_COUNT}" >> $GITHUB_OUTPUT
+          echo ::debug::${CC_FILE_COUNT}
 
       - name: Count number of functions
         id: compute_cc_function_count
-        run: echo "CC_FUNCTION_COUNT='echo ${{ steps.compute_cc.outputs.CC }} | grep -o -c \"function\"' >> $GITHUB_OUTPUT
+        run: >
+          CC_FUNCTION_COUNT=$(eval "echo ${{ steps.compute_cc.outputs.CC }} | grep -o -c \"function\"")
+          echo "CC_FUNCTION_COUNT=${CC_FUNCTION_COUNT}" >> $GITHUB_OUTPUT
+          echo ::debug::${CC_FUNCTION_COUNT}
 
       - name: Count number of classes
         id: compute_cc_class_count
-        run: echo "CC_CLASS_COUNT='echo ${{ steps.compute_cc.outputs.CC }} | grep -o -c \"class\"' >> $GITHUB_OUTPUT
+        run: >
+          CC_CLASS_COUNT=$(eval "echo ${{ steps.compute_cc.outputs.CC }} | grep -o -c \"class\"")
+          echo "CC_CLASS_COUNT=${CC_FILE_COUNT}" >> $GITHUB_OUTPUT
+          echo ::debug::${CC_CLASS_COUNT}
 
       - name: Count number of methods
         id: compute_cc_method_count
-        run: echo "CC_METHOD_COUNT='echo ${{ steps.compute_cc.outputs.CC }} | grep -o -c \"method\"' >> $GITHUB_OUTPUT
+        run: >
+          CC_METHOD_COUNT=$(eval "echo ${{ steps.compute_cc.outputs.CC }} | grep -o -c \"method\"")
+          echo "CC_METHOD_COUNT=${CC_METHOD_COUNT}" >> $GITHUB_OUTPUT
+          echo ::debug::${CC_METHOD_COUNT}
 
       - name: Report metrics to Datadog
         uses: masci/datadog@v1
