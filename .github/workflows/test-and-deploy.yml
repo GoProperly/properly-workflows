@@ -223,16 +223,8 @@ jobs:
       - name: Sum raw code metrics
         id: compute_raw_sum
         run: |
-          JQ_QUERY="map(to_entries) \
-            | add \
-            | group_by(.key) \
-            | map({ \
-                  key: .[0].key, \
-                  value: map(.value) | add \
-              }) \
-            | from_entries"
-
-          echo ${{ steps.compute_raw.outputs.RAW }} | jq -c ${JQ_QUERY} | read RAW_SUMMARY
+          JQ_QUERY="map(to_entries) | add | group_by(.key) | map({ key: .[0].key, value: map(.value) | add }) | from_entries"
+          echo ${{ steps.compute_raw.outputs.RAW }} | jq -c "${JQ_QUERY}" | read RAW_SUMMARY
           echo "RAW_SUMMARY=${RAW_SUMMARY}" >> $GITHUB_OUTPUT
           echo ::debug::${RAW_SUMMARY}
 
