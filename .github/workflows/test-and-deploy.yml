@@ -222,7 +222,7 @@ jobs:
       - name: Sum raw code metrics
         id: compute_raw_sum
         run: |
-          jq -c "map(to_entries) | add | group_by(.key) | map({ key: .[0].key, value: map(.value) | add }) | from_entries" radon_raw.json | read RAW_SUMMARY
+          RAW_SUMMARY=$(jq -c "map(to_entries) | add | group_by(.key) | map({ key: .[0].key, value: map(.value) | add }) | from_entries" radon_raw.json)
           echo "RAW_SUMMARY=${RAW_SUMMARY}" >> $GITHUB_OUTPUT
           echo ::debug::${RAW_SUMMARY}
 
@@ -232,28 +232,28 @@ jobs:
       - name: Count number of files
         id: compute_cc_file_count
         run: |
-          jq length radon_cc.json | read CC_FILE_COUNT
+          CC_FILE_COUNT=$(jq length radon_cc.json)
           echo "CC_FILE_COUNT=${CC_FILE_COUNT}" >> $GITHUB_OUTPUT
           echo ::debug::${CC_FILE_COUNT}
 
       - name: Count number of functions
         id: compute_cc_function_count
         run: |
-          cat radon_cc.json | grep -o \"function\" | wc -l | read CC_FUNCTION_COUNT
+          CC_FUNCTION_COUNT=$(cat radon_cc.json | grep -o \"function\" | wc -l)
           echo "CC_FUNCTION_COUNT=${CC_FUNCTION_COUNT}" >> $GITHUB_OUTPUT
           echo ::debug::${CC_FUNCTION_COUNT}
 
       - name: Count number of classes
         id: compute_cc_class_count
         run: |
-          cat radon_cc.json | grep -o \"class\" | wc -l | read CC_CLASS_COUNT
+          CC_CLASS_COUNT=$(cat radon_cc.json | grep -o \"class\" | wc -l)
           echo "CC_CLASS_COUNT=${CC_FILE_COUNT}" >> $GITHUB_OUTPUT
           echo ::debug::${CC_CLASS_COUNT}
 
       - name: Count number of methods
         id: compute_cc_method_count
         run: |
-          cat radon_cc.json | grep -o \"method\" | wc -l | read CC_METHOD_COUNT
+          CC_METHOD_COUNT=$(cat radon_cc.json | grep -o \"method\" | wc -l)
           echo "CC_METHOD_COUNT=${CC_METHOD_COUNT}" >> $GITHUB_OUTPUT
           echo ::debug::${CC_METHOD_COUNT}
 
