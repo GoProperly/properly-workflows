@@ -223,7 +223,7 @@ jobs:
 
       - name: Sum raw code metrics
         id: compute_raw_sum
-        run: >
+        run: |
           JQ_QUERY="map(to_entries) \
             | add \
             | group_by(.key) \
@@ -242,28 +242,28 @@ jobs:
 
       - name: Count number of files
         id: compute_cc_file_count
-        run: >
+        run: |
           CC_FILE_COUNT=$(eval "echo ${{ steps.compute_cc.outputs.CC }} | jq length")
           echo "CC_FILE_COUNT=${CC_FILE_COUNT}" >> $GITHUB_OUTPUT
           echo ::debug::${CC_FILE_COUNT}
 
       - name: Count number of functions
         id: compute_cc_function_count
-        run: >
+        run: |
           CC_FUNCTION_COUNT=$(eval "echo ${{ steps.compute_cc.outputs.CC }} | grep -o -c \"function\"")
           echo "CC_FUNCTION_COUNT=${CC_FUNCTION_COUNT}" >> $GITHUB_OUTPUT
           echo ::debug::${CC_FUNCTION_COUNT}
 
       - name: Count number of classes
         id: compute_cc_class_count
-        run: >
+        run: |
           CC_CLASS_COUNT=$(eval "echo ${{ steps.compute_cc.outputs.CC }} | grep -o -c \"class\"")
           echo "CC_CLASS_COUNT=${CC_FILE_COUNT}" >> $GITHUB_OUTPUT
           echo ::debug::${CC_CLASS_COUNT}
 
       - name: Count number of methods
         id: compute_cc_method_count
-        run: >
+        run: |
           CC_METHOD_COUNT=$(eval "echo ${{ steps.compute_cc.outputs.CC }} | grep -o -c \"method\"")
           echo "CC_METHOD_COUNT=${CC_METHOD_COUNT}" >> $GITHUB_OUTPUT
           echo ::debug::${CC_METHOD_COUNT}
