@@ -224,7 +224,7 @@ jobs:
       - name: Sum raw code metrics
         id: compute_raw_sum
         run: >
-          echo "RAW_SUMMARY='echo ${{ steps.compute_raw.outputs.RAW }} | jq map(to_entries)
+          echo "RAW_SUMMARY='echo ${{ steps.compute_raw.outputs.RAW }} | jq \"map(to_entries)
             | add
             | group_by(.key)
             | map({
@@ -232,7 +232,7 @@ jobs:
                   value: map(.value) | add
               })
             | from_entries
-          '" >> $GITHUB_OUTPUT
+          \"'" >> $GITHUB_OUTPUT
 
       - name: Compute cyclomatic complexity metrics
         id: compute_cc
