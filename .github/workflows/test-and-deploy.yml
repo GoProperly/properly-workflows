@@ -219,7 +219,7 @@ jobs:
 
       - name: Compute raw code metrics
         id: compute_raw
-        run: echo "RAW='poetry run radon raw ${{ inputs.src_directory }} -j'" >> $GITHUB_OUTPUT
+        run: echo "RAW=$(eval poetry run radon raw ${{ inputs.src_directory }} -j)" >> $GITHUB_OUTPUT
 
       - name: Sum raw code metrics
         id: compute_raw_sum
