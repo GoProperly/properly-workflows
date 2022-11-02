@@ -244,11 +244,15 @@ jobs:
 
       - name: Count number of functions
         id: compute_cc_function_count
-        run: echo "CC_FUNCTION_COUNT='echo ${{ steps.compute_cc.outputs.CC }} | grep -o -c '\"type\": \"function\"'" >> $GITHUB_OUTPUT
+        run: echo "CC_FUNCTION_COUNT='echo ${{ steps.compute_cc.outputs.CC }} | grep -o -c \"function\"' >> $GITHUB_OUTPUT
 
       - name: Count number of classes
         id: compute_cc_class_count
-        run: echo "CC_CLASS_COUNT='echo ${{ steps.compute_cc.outputs.CC }} | grep -o -c '\"type\": \"class\"'" >> $GITHUB_OUTPUT
+        run: echo "CC_CLASS_COUNT='echo ${{ steps.compute_cc.outputs.CC }} | grep -o -c \"class\"' >> $GITHUB_OUTPUT
+
+      - name: Count number of methods
+        id: compute_cc_method_count
+        run: echo "CC_METHOD_COUNT='echo ${{ steps.compute_cc.outputs.CC }} | grep -o -c \"method\"' >> $GITHUB_OUTPUT
 
       - name: Report metrics to Datadog
         uses: masci/datadog@v1
