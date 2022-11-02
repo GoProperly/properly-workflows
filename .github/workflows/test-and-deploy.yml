@@ -218,7 +218,7 @@ jobs:
 
       - name: Compute raw code metrics
         id: compute_raw
-        run: echo "RAW=$(eval poetry run radon raw ${{ inputs.src_directory }} -j)" >> $GITHUB_OUTPUT
+        run: echo "RAW=$(poetry run radon raw ${{ inputs.src_directory }} -j)" >> $GITHUB_OUTPUT
 
       - name: Sum raw code metrics
         id: compute_raw_sum
@@ -231,7 +231,7 @@ jobs:
                   value: map(.value) | add \
               }) \
             | from_entries"
-          RAW_SUMMARY=$(eval "echo '${{ steps.compute_raw.outputs.RAW }}' | jq ${JQ_QUERY}")
+          RAW_SUMMARY=$(jq ${JQ_QUERY} <<< ${{ steps.compute_raw.outputs.RAW }})
           echo "RAW_SUMMARY=${RAW_SUMMARY}" >> $GITHUB_OUTPUT
           echo ::debug::${RAW_SUMMARY}
 
@@ -242,28 +242,28 @@ jobs:
       - name: Count number of files
         id: compute_cc_file_count
         run: |
-          CC_FILE_COUNT=$(eval "echo '${{ steps.compute_cc.outputs.CC }}' | jq length")
+          CC_FILE_COUNT=$(jq length <<< ${{ steps.compute_cc.outputs.CC }})
           echo "CC_FILE_COUNT=${CC_FILE_COUNT}" >> $GITHUB_OUTPUT
           echo ::debug::${CC_FILE_COUNT}
 
       - name: Count number of functions
         id: compute_cc_function_count
         run: |
-          CC_FUNCTION_COUNT=$(eval "echo '${{ steps.compute_cc.outputs.CC }}' | grep -o -c \"function\"")
+          CC_FUNCTION_COUNT=$(grep -o \"function\" <<< ${{ steps.compute_cc.outputs.CC }} | wc -l)
           echo "CC_FUNCTION_COUNT=${CC_FUNCTION_COUNT}" >> $GITHUB_OUTPUT
           echo ::debug::${CC_FUNCTION_COUNT}
 
       - name: Count number of classes
         id: compute_cc_class_count
         run: |
-          CC_CLASS_COUNT=$(eval "echo '${{ steps.compute_cc.outputs.CC }}' | grep -o -c \"class\"")
+          CC_CLASS_COUNT=$(grep -o -c \"class\" <<< ${{ steps.compute_cc.outputs.CC }} | wc -l )
           echo "CC_CLASS_COUNT=${CC_FILE_COUNT}" >> $GITHUB_OUTPUT
           echo ::debug::${CC_CLASS_COUNT}
 
       - name: Count number of methods
         id: compute_cc_method_count
         run: |
-          CC_METHOD_COUNT=$(eval "echo '${{ steps.compute_cc.outputs.CC }}' | grep -o -c \"method\"")
+          CC_METHOD_COUNT=$(grep -o -c \"method\" <<< ${{ steps.compute_cc.outputs.CC }} | wc -l )
           echo "CC_METHOD_COUNT=${CC_METHOD_COUNT}" >> $GITHUB_OUTPUT
           echo ::debug::${CC_METHOD_COUNT}
 
