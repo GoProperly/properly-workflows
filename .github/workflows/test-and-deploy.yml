@@ -224,15 +224,15 @@ jobs:
       - name: Sum raw code metrics
         id: compute_raw_sum
         run: >
-          echo "RAW_SUMMARY='echo ${{ steps.compute_raw.outputs.RAW }} | jq \"map(to_entries)
-            | add
-            | group_by(.key)
-            | map({
-                  key: .[0].key,
-                  value: map(.value) | add
-              })
-            | from_entries
-          \"'" >> $GITHUB_OUTPUT
+          JQ_QUERY="map(to_entries) \
+            | add \
+            | group_by(.key) \
+            | map({ \
+                  key: .[0].key, \
+                  value: map(.value) | add \
+              }) \
+            | from_entries"
+          echo "RAW_SUMMARY='echo ${{ steps.compute_raw.outputs.RAW }} | jq ${JQ_QUERY}'" >> $GITHUB_OUTPUT
 
       - name: Compute cyclomatic complexity metrics
         id: compute_cc
