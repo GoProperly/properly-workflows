@@ -217,46 +217,43 @@ jobs:
           npm install
 
       - name: Compute raw code metrics
-        id: compute_raw
-        run: echo "RAW=$(poetry run radon raw ${{ inputs.src_directory }} -j)" >> $GITHUB_OUTPUT
+        run: poetry run radon raw ${{ inputs.src_directory }} -j -O radon_raw.json
 
       - name: Sum raw code metrics
         id: compute_raw_sum
         run: |
-          JQ_QUERY="map(to_entries) | add | group_by(.key) | map({ key: .[0].key, value: map(.value) | add }) | from_entries"
-          echo ${{ steps.compute_raw.outputs.RAW }} | jq -c "${JQ_QUERY}" | read RAW_SUMMARY
+          jq -c "map(to_entries) | add | group_by(.key) | map({ key: .[0].key, value: map(.value) | add }) | from_entries" radon_raw.json | read RAW_SUMMARY
           echo "RAW_SUMMARY=${RAW_SUMMARY}" >> $GITHUB_OUTPUT
           echo ::debug::${RAW_SUMMARY}
 
       - name: Compute cyclomatic complexity metrics
-        id: compute_cc
-        run: echo "CC='poetry run radon cc ${{ inputs.src_directory }} -j'" >> $GITHUB_OUTPUT
+        run: poetry run radon cc ${{ inputs.src_directory }} -j -O radon_cc.json
 
       - name: Count number of files
         id: compute_cc_file_count
         run: |
-          echo ${{ steps.compute_cc.outputs.CC }} | jq length | read CC_FILE_COUNT
+          jq length radon_cc.json | read CC_FILE_COUNT
           echo "CC_FILE_COUNT=${CC_FILE_COUNT}" >> $GITHUB_OUTPUT
           echo ::debug::${CC_FILE_COUNT}
 
       - name: Count number of functions
         id: compute_cc_function_count
         run: |
-          echo ${{ steps.compute_cc.outputs.CC }} | grep -o \"function\" | wc -l | read CC_FUNCTION_COUNT
+          cat radon_cc.json | grep -o \"function\" | wc -l | read CC_FUNCTION_COUNT
           echo "CC_FUNCTION_COUNT=${CC_FUNCTION_COUNT}" >> $GITHUB_OUTPUT
           echo ::debug::${CC_FUNCTION_COUNT}
 
       - name: Count number of classes
         id: compute_cc_class_count
         run: |
-          echo ${{ steps.compute_cc.outputs.CC }} | grep -o \"class\" | wc -l | read CC_CLASS_COUNT
+          cat radon_cc.json | grep -o \"class\" | wc -l | read CC_CLASS_COUNT
           echo "CC_CLASS_COUNT=${CC_FILE_COUNT}" >> $GITHUB_OUTPUT
           echo ::debug::${CC_CLASS_COUNT}
 
       - name: Count number of methods
         id: compute_cc_method_count
         run: |
-          echo ${{ steps.compute_cc.outputs.CC }} | grep -o \"method\" | wc -l | read CC_METHOD_COUNT
+          cat radon_cc.json | grep -o \"method\" | wc -l | read CC_METHOD_COUNT
           echo "CC_METHOD_COUNT=${CC_METHOD_COUNT}" >> $GITHUB_OUTPUT
           echo ::debug::${CC_METHOD_COUNT}
 
