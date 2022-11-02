@@ -4,16 +4,20 @@ on:
   workflow_call:
     inputs:
       python_version_file:
-        description: 'The location of .python-version file of the caller workflow repository'
-        default: '.python-version'
+        description: "The location of .python-version file of the caller workflow repository"
+        default: ".python-version"
         type: string
       default_branch:
-        description: 'The production branch of the caller workflow repository'
-        default: 'main'
+        description: "The production branch of the caller workflow repository"
+        default: "main"
         type: string
       working_directory:
-        description: 'The working directory of the caller workflow repository'
-        default: '.'
+        description: "The working directory of the caller workflow repository"
+        default: "."
+        type: string
+      src_directory:
+        description: "The src directory of the caller workflow repository"
+        default: "./src"
         type: string
       staging_env_url:
         description: 'URL for the deployed staging env (default "")'
@@ -22,16 +26,19 @@ on:
         description: 'URL for the deployed prod env (default "")'
         type: string
       deploy_staging:
-        description: 'A boolean value to run deploy to staging steps (default false)'
+        description: "A boolean value to run deploy to staging steps (default false)"
         type: boolean
       run_typecheck:
-        description: 'A boolean value to run typecheck step (default false)'
+        description: "A boolean value to run typecheck step (default false)"
         type: boolean
       run_datadog_ci:
-        description: 'A boolean value to run datadog step (default false)'
+        description: "A boolean value to run datadog step (default false)"
+        type: boolean
+      run_static_metrics:
+        description: "A boolean value to run static code analysis and report them to Datadog (default false)"
         type: boolean
       skip_domain_creation:
-        description: 'A boolean value to skip domain creation for legacy repos (default false)'
+        description: "A boolean value to skip domain creation for legacy repos (default false)"
         type: boolean
 
 jobs:
@@ -67,7 +74,7 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ needs.python_version.outputs.version }}
-          cache: 'poetry'
+          cache: "poetry"
 
       # Poetry must explicitly be told to use the expected version https://github.com/actions/setup-python/issues/374
       - name: Install dependencies
@@ -81,7 +88,7 @@ jobs:
         run: poetry run inv lint
 
       - name: Typecheck
-        if: inputs.run_typecheck 
+        if: inputs.run_typecheck
         run: poetry run inv typecheck
 
       - name: Run Tests
@@ -171,3 +178,136 @@ jobs:
           env: ${{ steps.deployment_prod.outputs.env }}
           env_url: ${{ inputs.prod_env_url }}
           deployment_id: ${{ steps.deployment_prod.outputs.deployment_id }}
+
+  send_code_metrics:
+    name: Send Code Metrics
+    needs: python_version
+    runs-on: ubuntu-latest
+    concurrency: test-deploy-${{ github.repository }}
+    timeout-minutes: 10
+
+    # if: ${{ inputs.run_static_metrics && github.ref == format('refs/heads/{0}', inputs.default_branch) }}
+    if: ${{ inputs.run_static_metrics }}
+
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      # pin version for poetry as higher versions have PEP 440 versioning issues
+      - name: Install poetry
+        run: pipx install poetry==1.1.15
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ needs.python_version.outputs.version }}
+          cache: "poetry"
+
+      # Poetry must explicitly be told to use the expected version https://github.com/actions/setup-python/issues/374
+      - name: Install dependencies
+        run: |
+          poetry env use ${{ needs.python_version.outputs.version }}
+          poetry config http-basic.properly "${{ secrets.PIP_GEMFURY_DEPLOY_TOKEN }}" NOPASS
+          poetry install
+          npm install
+
+      - name: Compute raw code metrics
+        id: compute_raw
+        run: echo "RAW='poetry run radon raw ${{ inputs.src_directory }} -j'" >> $GITHUB_OUTPUT
+
+      - name: Sum raw code metrics
+        id: compute_raw_sum
+        run: >
+          echo "RAW_SUMMARY='echo ${{ steps.compute_raw.outputs.RAW }} | jq map(to_entries)
+            | add
+            | group_by(.key)
+            | map({
+                  key: .[0].key,
+                  value: map(.value) | add
+              })
+            | from_entries
+          '" >> $GITHUB_OUTPUT
+
+      - name: Compute cyclomatic complexity metrics
+        id: compute_cc
+        run: echo "CC='poetry run radon cc ${{ inputs.src_directory }} -j'" >> $GITHUB_OUTPUT
+
+      - name: Count number of files
+        id: compute_cc_file_count
+        run: echo "CC_FILE_COUNT='echo ${{ steps.compute_cc.outputs.CC }} | jq length'" >> $GITHUB_OUTPUT
+
+      - name: Count number of functions
+        id: compute_cc_function_count
+        run: echo "CC_FUNCTION_COUNT='echo ${{ steps.compute_cc.outputs.CC }} | grep -o -c '\"type\": \"function\"'" >> $GITHUB_OUTPUT
+
+      - name: Count number of classes
+        id: compute_cc_class_count
+        run: echo "CC_CLASS_COUNT='echo ${{ steps.compute_cc.outputs.CC }} | grep -o -c '\"type\": \"class\"'" >> $GITHUB_OUTPUT
+
+      - name: Report metrics to Datadog
+        uses: masci/datadog@v1
+        with:
+          api-key: ${{ secrets.DD_API_KEY }}
+          metrics: |
+            - type: "count"
+              name: "properly.ci.code.metrics.loc"
+              value: ${{ fromJSON( steps.compute_raw_sum.outputs.RAW_SUMMARY ).loc }}
+              host: ${{ github.repository_owner }}
+              tags:
+                - "repository:${{ github.repository }}"
+                - "workflow:${{ github.workflow }}"
+                - "default_branch": ${{ github.ref_name == inputs.main_branch }}
+            - type: "count"
+              name: "properly.ci.code.metrics.sloc"
+              value: ${{ fromJSON( steps.compute_raw_sum.outputs.RAW_SUMMARY ).sloc }}
+              host: ${{ github.repository_owner }}
+              tags:
+                - "repository:${{ github.repository }}"
+                - "workflow:${{ github.workflow }}"
+                - "default_branch": ${{ github.ref_name == inputs.main_branch }}
+            - type: "count"
+              name: "properly.ci.code.metrics.lloc"
+              value: ${{ fromJSON( steps.compute_raw_sum.outputs.RAW_SUMMARY ).lloc }}
+              host: ${{ github.repository_owner }}
+              tags:
+                - "repository:${{ github.repository }}"
+                - "workflow:${{ github.workflow }}"
+                - "default_branch": ${{ github.ref_name == inputs.main_branch }}
+            - type: "count"
+              name: "properly.ci.code.metrics.file_count"
+              value: ${{ steps.compute_cc_file_count.outputs.CC_FILE_COUNT }}
+              host: ${{ github.repository_owner }}
+              tags:
+                - "repository:${{ github.repository }}"
+                - "workflow:${{ github.workflow }}"
+                - "default_branch": ${{ github.ref_name == inputs.main_branch }}
+            - type: "count"
+              name: "properly.ci.code.metrics.function_count"
+              value: ${{ steps.compute_cc_function_count.outputs.CC_FUNCTION_COUNT }}
+              host: ${{ github.repository_owner }}
+              tags:
+                - "repository:${{ github.repository }}"
+                - "workflow:${{ github.workflow }}"
+                - "default_branch": ${{ github.ref_name == inputs.main_branch }}
+            - type: "count"
+              name: "properly.ci.code.metrics.class_count"
+              value: ${{ steps.compute_cc_class_count.outputs.CC_CLASS_COUNT }}
+              host: ${{ github.repository_owner }}
+              tags:
+                - "repository:${{ github.repository }}"
+                - "workflow:${{ github.workflow }}"
+                - "default_branch": ${{ github.ref_name == inputs.main_branch }}
+            - type: "count"
+              name: "properly.ci.code.metrics.method_count"
+              value: ${{ steps.compute_cc_method_count.outputs.CC_METHOD_COUNT }}
+              host: ${{ github.repository_owner }}
+              tags:
+                - "repository:${{ github.repository }}"
+                - "workflow:${{ github.workflow }}"
+                - "default_branch": ${{ github.ref_name == inputs.main_branch }}
