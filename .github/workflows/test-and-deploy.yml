@@ -247,7 +247,7 @@ jobs:
         id: compute_cc_class_count
         run: |
           CC_CLASS_COUNT=$(cat radon_cc.json | grep -o \"class\" | wc -l)
-          echo "CC_CLASS_COUNT=${CC_FILE_COUNT}" >> $GITHUB_OUTPUT
+          echo "CC_CLASS_COUNT=${CC_CLASS_COUNT}" >> $GITHUB_OUTPUT
           echo ::debug::${CC_CLASS_COUNT}
 
       - name: Count number of methods
