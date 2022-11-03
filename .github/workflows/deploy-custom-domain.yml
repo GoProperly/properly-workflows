@@ -14,6 +14,9 @@ on:
       run_typecheck:
         description: 'A boolean value to run typecheck step (default false)'
         type: boolean
+      remove_dev_deps:
+        description: "A boolean value to remove dev dependencies before deploying (default false)"
+        type: boolean
 
 jobs:
   check_comment:
@@ -126,6 +129,14 @@ jobs:
         with:
           files: "${{ inputs.working_directory }}/tests/*.xml"
           comment_mode: "always"
+
+      - name: Remove dependencies and reinstall prod dependencies
+        if: inputs.remove_dev_deps
+        run: |
+          rm -rf .venv
+          poetry env use ${{ needs.python_version.outputs.version }}
+          poetry config http-basic.properly "${{ secrets.PIP_GEMFURY_DEPLOY_TOKEN }}" NOPASS
+          poetry install --no-dev
 
       - name: Start deployment
         id: deployment_custom
