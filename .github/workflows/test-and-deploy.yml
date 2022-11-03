@@ -37,6 +37,9 @@ on:
       run_static_metrics:
         description: "A boolean value to run static code analysis and report them to Datadog (default false)"
         type: boolean
+      remove_dev_deps:
+        description: "A boolean value to remove dev dependencies before deploying (default false)"
+        type: boolean
       skip_domain_creation:
         description: "A boolean value to skip domain creation for legacy repos (default false)"
         type: boolean
@@ -106,6 +109,14 @@ jobs:
         run: poetry run inv datadog-ci
         env:
           DATADOG_API_KEY: ${{ secrets.DD_API_KEY }}
+
+      - name: Remove dependencies and reinstall prod dependencies
+        if: inputs.remove_dev_deps
+        run: |
+          rm -rf .venv
+          poetry env use ${{ needs.python_version.outputs.version }}
+          poetry config http-basic.properly "${{ secrets.PIP_GEMFURY_DEPLOY_TOKEN }}" NOPASS
+          poetry install --without dev
 
       - name: Start deployment (staging)
         id: deployment_staging
