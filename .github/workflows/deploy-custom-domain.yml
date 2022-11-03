@@ -136,7 +136,7 @@ jobs:
           rm -rf .venv
           poetry env use ${{ needs.python_version.outputs.version }}
           poetry config http-basic.properly "${{ secrets.PIP_GEMFURY_DEPLOY_TOKEN }}" NOPASS
-          poetry install --without dev
+          poetry install --no-dev
 
       - name: Start deployment
         id: deployment_custom
