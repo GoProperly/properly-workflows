@@ -12,7 +12,7 @@ on:
         default: '.'
         type: string
       staging_env_url:
-        description: 'URL for the deployed staging env (default "")'
+        description: 'URL for the deployed staging documentation (default "")'
         type: string
       run_typecheck:
         description: 'A boolean value to run typecheck step (default false)'
