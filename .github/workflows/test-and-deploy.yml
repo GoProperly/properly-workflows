@@ -20,10 +20,10 @@ on:
         default: "./src"
         type: string
       staging_env_url:
-        description: 'URL for the deployed staging env (default "")'
+        description: 'URL for the deployed staging documentation (default "")'
         type: string
       prod_env_url:
-        description: 'URL for the deployed prod env (default "")'
+        description: 'URL for the deployed production documentation (default "")'
         type: string
       deploy_staging:
         description: "A boolean value to run deploy to staging steps (default false)"
