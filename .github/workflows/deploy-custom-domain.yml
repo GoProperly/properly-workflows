@@ -14,6 +14,9 @@ on:
       run_typecheck:
         description: 'A boolean value to run typecheck step (default false)'
         type: boolean
+      run_test:
+        description: 'A boolean value to run test step (default false)'
+        type: boolean
       remove_dev_deps:
         description: "A boolean value to remove dev dependencies before deploying (default false)"
         type: boolean
@@ -121,6 +124,7 @@ jobs:
         run: poetry run inv typecheck
 
       - name: Run Tests
+        if: inputs.run_test
         run: poetry run inv test --junitxml="tests/results.xml"
 
       - name: Publish test results
