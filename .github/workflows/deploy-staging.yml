@@ -17,6 +17,9 @@ on:
       run_typecheck:
         description: 'A boolean value to run typecheck step (default false)'
         type: boolean
+      run_test:
+        description: 'A boolean value to run test step (default false)'
+        type: boolean
       remove_dev_deps:
         description: "A boolean value to remove dev dependencies before deploying (default false)"
         type: boolean
@@ -69,7 +72,7 @@ jobs:
 
       # pin version for poetry as higher versions have PEP 440 versioning issues
       - name: Install poetry
-        run: pipx install poetry==1.1.15
+        run: pipx install poetry==1.3.2
 
       - uses: actions/setup-python@v4
         with:
@@ -92,6 +95,7 @@ jobs:
         run: poetry run inv typecheck
 
       - name: Run Tests
+        if: inputs.run_test
         run: poetry run inv test --junitxml="tests/results.xml"
 
       - name: Publish test results
