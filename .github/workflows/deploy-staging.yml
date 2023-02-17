@@ -123,7 +123,7 @@ jobs:
           ref: ${{ fromJson(steps.get_pull_request_ref.outputs.data).head.ref }}
 
       - name: Deploy (staging)
-        run: poetry run inv deploy --stage staging
+        run: poetry run inv deploy --stage staging --verbose
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
