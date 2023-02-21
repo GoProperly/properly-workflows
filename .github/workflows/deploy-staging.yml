@@ -67,9 +67,8 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # pin version for poetry as higher versions have PEP 440 versioning issues
       - name: Install poetry
-        run: pipx install poetry==1.1.15
+        run: pipx install poetry
 
       - uses: actions/setup-python@v4
         with:
