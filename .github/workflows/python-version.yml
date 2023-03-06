@@ -27,7 +27,7 @@ jobs:
 
       - name: Python Version
         id: python_version
-        run: echo ::set-output name=version::$(cat ${{ inputs.python_version_file }})
+        run: echo version=$(cat ${{ inputs.python_version_file }}) >> $GITHUB_OUTPUT
 
       - name: Report extracted Python version
         run: echo ::debug::${{ steps.python_version.outputs.version }}

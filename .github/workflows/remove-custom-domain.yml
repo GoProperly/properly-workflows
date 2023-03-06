@@ -24,8 +24,8 @@ jobs:
     steps:
       - name: Extract Stage Name
         id: extract_stage_name
-        run: echo ::set-output name=stage_name::$(echo ${{ github.event.comment.body }} | sed -n 's/^remove STAGE=\([a-zA-Z0-9.-]*\).*/\1/p')
-      
+        run: echo stage_name=$(echo ${{ github.event.comment.body }} | sed -n 's/^remove STAGE=\([a-zA-Z0-9.-]*\).*/\1/p') >> $GITHUB_OUTPUT
+
       - name: Debug stage output
         run: echo ::debug::${{ steps.extract_stage_name.outputs.stage_name }}
 
