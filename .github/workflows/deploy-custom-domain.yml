@@ -31,7 +31,7 @@ jobs:
     steps:
       - name: Extract Domain Name
         id: extract_domain_name
-        run: echo ::set-output name=extracted_domain::$(echo ${{ github.event.comment.body }} | sed -n 's/^deploy STAGE=\([a-zA-Z0-9.-]*\).*/\L\1/p')
+        run: echo extracted_domain=$(echo ${{ github.event.comment.body }} | sed -n 's/^deploy STAGE=\([a-zA-Z0-9.-]*\).*/\L\1/p') >> $GITHUB_OUTPUT
 
       - name: Debug stage output
         run: echo ::debug::${{ steps.extract_domain_name.outputs.extracted_domain }}
@@ -40,7 +40,7 @@ jobs:
         id: extract_database_cluster
         # if stage is staging, DB Cluster will not override
         if: steps.extract_domain_name.outputs.extracted_domain != '' && steps.extract_domain_name.outputs.extracted_domain != 'staging'
-        run: echo ::set-output name=extracted_database_cluster::$(echo ${{ github.event.comment.body }} | sed -n 's/^deploy STAGE=\([a-zA-Z0-9.-]*\) PRODUCT_DATABASE_CLUSTER=\([a-zA-Z0-9._-]*\).*/\2/p')
+        run: echo extracted_database_cluster=$(echo ${{ github.event.comment.body }} | sed -n 's/^deploy STAGE=\([a-zA-Z0-9.-]*\) PRODUCT_DATABASE_CLUSTER=\([a-zA-Z0-9._-]*\).*/\2/p') >> $GITHUB_OUTPUT
 
       - name: Debug cluster output
         run: echo ::debug::${{ steps.extract_database_cluster.outputs.extracted_database_cluster }}
